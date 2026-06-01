@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/giantswarm/test-release-please/compare/v1.0.0...v1.1.0) (2026-06-01)
+
+
+### Added
+
+* improve changelog ([5ada690](https://github.com/giantswarm/test-release-please/commit/5ada6903e80cba67db10ac08eb6f60b9868b962a))
+
 ## 1.0.0 (2026-06-01)
 
 
