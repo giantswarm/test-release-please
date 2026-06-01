@@ -16,7 +16,7 @@ permissions: {}
 
 jobs:
   release_please:
-    uses: giantswarm/github-workflows/.github/workflows/release.yaml@main
+    uses: giantswarm/github-workflows/.github/workflows/release.yaml@fix-first-release-auto-merge-detection
     permissions:
       contents: write
       pull-requests: write
