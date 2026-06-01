@@ -16,7 +16,7 @@ permissions: {}
 
 jobs:
   release_please:
-    uses: giantswarm/github-workflows/.github/workflows/release.yaml@fix-first-release-auto-merge-detection
+    uses: giantswarm/github-workflows/.github/workflows/release.yaml@release-approver-auto-approve
     permissions:
       contents: write
       pull-requests: write
@@ -25,3 +25,5 @@ jobs:
     secrets:
       RELEASE_PLEASE_CLIENT_ID: ${{ secrets.RELEASE_PLEASE_CLIENT_ID }}
       RELEASE_PLEASE_PRIVATE_KEY: ${{ secrets.RELEASE_PLEASE_PRIVATE_KEY }}
+      RELEASE_PLEASE_APPROVER_CLIENT_ID: ${{ secrets.RELEASE_PLEASE_APPROVER_CLIENT_ID }}
+      RELEASE_PLEASE_APPROVER_PRIVATE_KEY: ${{ secrets.RELEASE_PLEASE_APPROVER_PRIVATE_KEY }}
