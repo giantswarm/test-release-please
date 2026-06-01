@@ -4,12 +4,12 @@
 name: Probe bypass merge
 
 on:
-  workflow_dispatch:
-    inputs:
-      pr-number:
-        description: PR to bypass-merge
-        required: true
-        default: "2"
+  push:
+    branches:
+      - probe-bypass-merge
+
+env:
+  PR_NUMBER: "2"
 
 permissions: {}
 
@@ -31,7 +31,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ inputs.pr-number }}
+          PR_NUMBER: ${{ env.PR_NUMBER }}
         run: |
           set -euo pipefail
           echo "Pre-merge PR state:"
