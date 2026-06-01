@@ -1,0 +1,42 @@
+# One-off probe to verify the release-please-approver App's review counts
+# toward branch protection's required-approval rule. Approves PR #5 as
+# release-please-approver[bot]. Delete this file after the experiment.
+name: Probe approver App
+
+on:
+  push:
+    branches:
+      - probe-approver-app
+
+env:
+  PR_NUMBER: "5"
+
+permissions: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Generate release-please-approver App token
+        id: token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.RELEASE_PLEASE_APPROVER_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APPROVER_PRIVATE_KEY }}
+
+      - name: Approve PR as release-please-approver
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          echo "Pre-approval state:"
+          gh pr view "$PR_NUMBER" --json reviewDecision,reviews
+
+          echo "Submitting approval..."
+          gh pr review "$PR_NUMBER" --approve --body "Probe: verifying release-please-approver App reviews satisfy branch protection."
+
+          echo "Post-approval state:"
+          gh pr view "$PR_NUMBER" --json reviewDecision,reviews
