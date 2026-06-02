@@ -1,3 +1,5 @@
+---
+# yamllint disable rule:truthy
 # goreleaser config for the push-based PoC.
 # Spec: https://goreleaser.com/customization/
 version: 2
@@ -10,35 +12,67 @@ before:
 
 builds:
   - id: cli
-    main: ./
+    main: .
     binary: test-release-please
-    env:
-      - CGO_ENABLED=0
     goos:
       - linux
       - darwin
+      - windows
     goarch:
       - amd64
       - arm64
-    # `-X main.version=...` injects the tag into the `version` var in main.go
-    # so the binary can report its own version. -s -w strips debug info to
-    # shrink the binary.
+    env:
+      - CGO_ENABLED=0
+    # Reproducible builds: stamp the binary with the commit's timestamp instead
+    # of the build host's clock, so the same source always produces the same
+    # bytes.
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    flags:
+      - -trimpath
+    # `-X main.version=...` injects the tag into vars in main.go so the binary
+    # can report its own version/commit/build-date. -s -w strips debug info
+    # to shrink the binary.
     ldflags:
-      - -s -w -X main.version={{.Version}}
+      - >-
+        -s -w
+        -X main.version={{.Version}}
+        -X main.commit={{.ShortCommit}}
+        -X main.date={{.Date}}
 
 archives:
-  - format: tar.gz
+  - id: default
+    formats: [tar.gz]
+    # Names like `test-release-please_Darwin_x86_64.tar.gz` — matches the
+    # conventional Homebrew / curl-download style.
     name_template: >-
-      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+    wrap_in_directory: true
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+      - goos: darwin
+        formats: [zip]
+    files:
+      - README.md
 
-checksums:
-  name_template: "checksums.txt"
+checksum:
+  algorithm: sha256
+  name_template: '{{ .ProjectName }}_checksums.txt'
 
 # Release notes shown on the GitHub Release page. Generated from git log
 # between the previous tag and the new one, grouped by conventional-commit
-# type. Same shape as what release-please used to write into CHANGELOG.md
-# — just rendered at release time onto the GitHub Releases page instead of
-# committed back into the repo.
+# type. Mirrors the section shape release-please writes into CHANGELOG.md
+# (Features / Bug Fixes / Performance / Other), so anyone used to those sees
+# a familiar structure.
+#
+# We deliberately don't use `use: github-native` here — github-native renders
+# a flat PR list unless `.github/release.yml` configures categories via PR
+# labels, which the org doesn't auto-apply. Custom grouping by commit prefix
+# gives us section headers without that extra labeling pipeline.
 changelog:
   use: github
   sort: asc
@@ -65,4 +99,22 @@ changelog:
 
 release:
   draft: false
-  prerelease: auto   # automatically marks vX.Y.Z-rc.N etc. as pre-releases
+  prerelease: auto   # auto-marks vX.Y.Z-rc.N etc. as pre-releases
+  name_template: "{{.ProjectName}} v{{.Version}}"
+  # Surface unwrapped binaries on the release page so users can curl them
+  # directly without untarring. Matches klausctl's convention.
+  # Globs handle the per-arch dist-directory suffixes goreleaser appends
+  # (e.g. `_v1` for goamd64, `_v8.0` for goarm64) without us hard-coding them.
+  extra_files:
+    - glob: ./dist/cli_linux_amd64*/test-release-please
+      name_template: test-release-please_linux_amd64
+    - glob: ./dist/cli_linux_arm64*/test-release-please
+      name_template: test-release-please_linux_arm64
+    - glob: ./dist/cli_darwin_amd64*/test-release-please
+      name_template: test-release-please_darwin_amd64
+    - glob: ./dist/cli_darwin_arm64*/test-release-please
+      name_template: test-release-please_darwin_arm64
+    - glob: ./dist/cli_windows_amd64*/test-release-please.exe
+      name_template: test-release-please_windows_amd64.exe
+    - glob: ./dist/cli_windows_arm64*/test-release-please.exe
+      name_template: test-release-please_windows_arm64.exe

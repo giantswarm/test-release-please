@@ -1,9 +1,12 @@
+---
+# yamllint disable rule:truthy
 # Push-based release tagger.
 #
-# On every push to main, inspects conventional commits since the last v*.*.* tag
-# via git-cliff and creates a new tag if a bump is warranted. The tag push then
-# triggers the publishers (see release.yaml for the goreleaser side; for chart
-# and service repos, CircleCI's architect orbs fire on the same tag pattern).
+# On every push to main, inspects conventional commits since the last v*.*.*
+# tag via git-cliff and creates a new tag if a bump is warranted. The tag push
+# then triggers the publisher (see release.yaml for goreleaser; for chart and
+# service repos this would be the CircleCI architect pipeline firing on the
+# same /^v.*/ tag filter).
 #
 # No release PR. No human approval step. The mechanism that protects against
 # bad releases is the pre-merge CI on the feature PRs that landed these
@@ -25,16 +28,18 @@ concurrency:
 
 jobs:
   tag:
+    name: Tag
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           fetch-depth: 0        # full history so git-cliff sees every commit
-          fetch-tags: true      # ensure tags are present in shallow runners
+          fetch-tags: true      # ensure tags are present (shallow runners drop them by default)
 
-      - name: Compute next version
+      - name: Compute next version with git-cliff
         id: cliff
-        uses: orhun/git-cliff-action@v4
+        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5  # v4.8.0
         with:
           config: cliff.toml
           args: --bumped-version
@@ -59,11 +64,13 @@ jobs:
         if: steps.decide.outputs.tag != ''
         env:
           TAG: ${{ steps.decide.outputs.tag }}
+          # Attribute the tag to the person whose push triggered the workflow.
+          # For PR-merge pushes this is the merger; for direct pushes it's the
+          # pusher. Either way, "the person responsible for this push to main."
+          GIT_ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
-          # Use the github-actions[bot] identity so the tag's tagger is clearly
-          # attributable to CI rather than a real person.
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name  "$GIT_ACTOR"
+          git config user.email "${GIT_ACTOR}@users.noreply.github.com"
           git tag -a "$TAG" -m "Release $TAG"
           git push origin "$TAG"
