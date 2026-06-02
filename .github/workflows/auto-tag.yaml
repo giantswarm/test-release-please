@@ -2,28 +2,32 @@
 # yamllint disable rule:truthy
 # Push-based release tagger.
 #
-# On every push to main, inspects conventional commits since the last v*.*.*
-# tag via git-cliff and creates a new tag if a bump is warranted. The tag push
-# then triggers the publisher (see goreleaser.yaml; for chart and
-# service repos this would be the CircleCI architect pipeline firing on the
-# same /^v.*/ tag filter).
+# Runs on push to main (normal releases) and to release-* branches (backports
+# / maintenance releases). Inspects conventional commits reachable from the
+# pushed ref since the latest reachable v*.*.* tag via git-cliff, and creates
+# a new tag if a bump is warranted. The tag push then triggers the publisher
+# (see goreleaser.yaml; for chart and service repos this would be the
+# CircleCI architect pipeline firing on the same /^v.*/ tag filter).
 #
 # No release PR. No human approval step. The mechanism that protects against
 # bad releases is the pre-merge CI on the feature PRs that landed these
-# commits — once they're on main, they ship.
+# commits — once they're on the branch, they ship.
 name: Auto-tag
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'release-*'   # maintenance branches for backports, e.g. release-2.x
 
 permissions:
   contents: write   # needed to push tags
 
-# Avoid two tagger runs racing on rapid back-to-back merges. A second push
-# while a tag is being computed waits for the first to finish.
+# Scope the concurrency lock per branch so a backport tag on release-2.x
+# doesn't block (or get blocked by) a main release, and vice versa. A second
+# push to the same branch while a tag is being computed still waits.
 concurrency:
-  group: auto-tag
+  group: auto-tag-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -50,8 +54,15 @@ jobs:
           NEXT: ${{ steps.cliff.outputs.version }}
         run: |
           set -euo pipefail
-          last=$(git tag --list 'v*.*.*' --sort=-v:refname | head -1)
-          echo "last tag: ${last:-<none>}"
+          # `git describe --tags --abbrev=0` returns the closest tag reachable
+          # from HEAD — NOT the highest tag in the repo overall. This matters
+          # for backports: on release-2.x, HEAD's reachable history terminates
+          # before v3.0.0 was tagged, so describe correctly returns v2.3.5
+          # (the baseline of the 2.x line) and we end up tagging v2.3.6 rather
+          # than something nonsensical relative to v3.0.0.
+          last=$(git describe --tags --abbrev=0 --match='v*.*.*' 2>/dev/null || echo "")
+          echo "branch: ${GITHUB_REF_NAME}"
+          echo "last reachable tag: ${last:-<none>}"
           echo "next computed: ${NEXT:-<empty>}"
           if [ -z "${NEXT}" ] || [ "${NEXT}" = "${last}" ]; then
             echo "No releasable commits since ${last:-inception}; skipping tag."
@@ -66,7 +77,8 @@ jobs:
           TAG: ${{ steps.decide.outputs.tag }}
           # Attribute the tag to the person whose push triggered the workflow.
           # For PR-merge pushes this is the merger; for direct pushes it's the
-          # pusher. Either way, "the person responsible for this push to main."
+          # pusher. Either way, "the person responsible for this push" — works
+          # for both main releases and release-branch backports.
           GIT_ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
