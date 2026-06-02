@@ -2,7 +2,7 @@
 
 Throwaway repo for testing CI tooling. Currently configured as a PoC of the
 **push-based release flow** (no Release PR; conventional commits on `main`
-auto-tag, the tag triggers publishing).
+auto-create a tag, the tag triggers publishing).
 
 ## How it works
 
@@ -10,7 +10,7 @@ auto-tag, the tag triggers publishing).
 push to main
    │
    ▼
-.github/workflows/auto-tag.yaml  ── git-cliff inspects commits since last tag
+.github/workflows/auto-release.yaml  ── git-cliff inspects commits since last tag
                                   ── creates and pushes vX.Y.Z if bump warranted
    │
    ▼ (tag push)
@@ -24,7 +24,7 @@ CircleCI architect pipeline (same tag trigger, different publisher).
 
 | Path | Purpose |
 |---|---|
-| `.github/workflows/auto-tag.yaml` | Tagger — runs on push to main |
+| `.github/workflows/auto-release.yaml` | Tagger — runs on push to main |
 | `.github/workflows/release.yaml`  | Publisher — runs on tag push, invokes goreleaser |
 | `cliff.toml`                      | git-cliff config: bump rules + (unused here) changelog template |
 | `.goreleaser.yaml`                | goreleaser config: builds, archives, release notes |
