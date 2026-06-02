@@ -3,7 +3,7 @@
 # Publish a GitHub Release with built binaries when a v*.*.* tag is pushed.
 # For a chart or service repo this would be the CircleCI architect pipeline
 # instead — same trigger (tag push), different publisher.
-name: Release
+name: GoReleaser
 
 on:
   push:

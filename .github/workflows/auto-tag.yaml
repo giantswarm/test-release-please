@@ -4,14 +4,14 @@
 #
 # On every push to main, inspects conventional commits since the last v*.*.*
 # tag via git-cliff and creates a new tag if a bump is warranted. The tag push
-# then triggers the publisher (see release.yaml for goreleaser; for chart and
+# then triggers the publisher (see goreleaser.yaml; for chart and
 # service repos this would be the CircleCI architect pipeline firing on the
 # same /^v.*/ tag filter).
 #
 # No release PR. No human approval step. The mechanism that protects against
 # bad releases is the pre-merge CI on the feature PRs that landed these
 # commits — once they're on main, they ship.
-name: Auto Release
+name: Auto-tag
 
 on:
   push:
@@ -23,7 +23,7 @@ permissions:
 # Avoid two tagger runs racing on rapid back-to-back merges. A second push
 # while a tag is being computed waits for the first to finish.
 concurrency:
-  group: auto-release
+  group: auto-tag
   cancel-in-progress: false
 
 jobs:

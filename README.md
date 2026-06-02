@@ -2,7 +2,7 @@
 
 Throwaway repo for testing CI tooling. Currently configured as a PoC of the
 **push-based release flow** (no Release PR; conventional commits on `main`
-auto-create a tag, the tag triggers publishing).
+auto-tag, the tag triggers publishing).
 
 ## How it works
 
@@ -10,22 +10,22 @@ auto-create a tag, the tag triggers publishing).
 push to main
    │
    ▼
-.github/workflows/auto-release.yaml  ── git-cliff inspects commits since last tag
+.github/workflows/auto-tag.yaml  ── git-cliff inspects commits since last tag
                                   ── creates and pushes vX.Y.Z if bump warranted
    │
    ▼ (tag push)
-.github/workflows/release.yaml   ── goreleaser builds binaries, opens GH Release
+.github/workflows/goreleaser.yaml ── goreleaser builds binaries, opens GH Release
 ```
 
-For chart/service repos the `release.yaml` would be replaced by the existing
+For chart/service repos the `goreleaser.yaml` would be replaced by the existing
 CircleCI architect pipeline (same tag trigger, different publisher).
 
 ## Files
 
 | Path | Purpose |
 |---|---|
-| `.github/workflows/auto-release.yaml` | Tagger — runs on push to main |
-| `.github/workflows/release.yaml`  | Publisher — runs on tag push, invokes goreleaser |
+| `.github/workflows/auto-tag.yaml` | Tagger — runs on push to main |
+| `.github/workflows/goreleaser.yaml` | Publisher — runs on tag push, invokes goreleaser |
 | `cliff.toml`                      | git-cliff config: bump rules + (unused here) changelog template |
 | `.goreleaser.yaml`                | goreleaser config: builds, archives, release notes |
 | `main.go` / `go.mod`              | Minimal Go CLI so goreleaser has something to build |
