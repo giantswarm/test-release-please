@@ -65,9 +65,20 @@ checksum:
 
 # Release notes shown on the GitHub Release page. Generated from git log
 # between the previous tag and the new one, grouped by conventional-commit
-# type. Mirrors the section shape release-please writes into CHANGELOG.md
-# (Features / Bug Fixes / Performance / Other), so anyone used to those sees
-# a familiar structure.
+# type. Section names mirror the old release-please-config.json (Keep-a-
+# Changelog convention) — Added / Fixed / Changed / Security — so the GitHub
+# Release reads the same as the CHANGELOG.md release-please used to produce.
+# Must stay in sync with cliff.toml's commit_parsers.
+#
+# Trade-off baked into this shape: matching release-please faithfully means
+# docs / chore / test / build / ci / refactor / perf all land under "Changed"
+# — they're not filtered out. So a release that included a Renovate
+# `chore(deps):` bump will show that bump in the notes. Cleaner notes (the
+# previous default) would filter those out; the cost is no longer matching
+# what people are used to from release-please.
+#
+# `style:` is filtered out — release-please-config.json didn't map it
+# anywhere either.
 #
 # We deliberately don't use `use: github-native` here — github-native renders
 # a flat PR list unless `.github/release.yml` configures categories via PR
@@ -77,25 +88,21 @@ changelog:
   use: github
   sort: asc
   groups:
-    - title: Features
+    - title: Added
       regexp: '^.*feat(\(.+\))?!?:'
       order: 0
-    - title: Bug Fixes
+    - title: Fixed
       regexp: '^.*fix(\(.+\))?!?:'
       order: 1
-    - title: Performance
-      regexp: '^.*perf(\(.+\))?!?:'
+    - title: Changed
+      regexp: '^.*(refactor|perf|docs|chore|test|build|ci)(\(.+\))?!?:'
       order: 2
-    - title: Other
-      order: 999
+    - title: Security
+      regexp: '^.*security(\(.+\))?!?:'
+      order: 3
   filters:
     exclude:
-      - '^docs:'
-      - '^chore:'
-      - '^ci:'
-      - '^test:'
-      - '^style:'
-      - '^build:'
+      - '^style(\(.+\))?!?:'
 
 release:
   draft: false

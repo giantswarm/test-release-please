@@ -23,18 +23,26 @@ filter_unconventional = true
 topo_order = false
 sort_commits = "oldest"
 
-# Map commit types to changelog groups (used if we ever render notes from cliff
-# instead of letting goreleaser do it). The `skip = true` rows tell `--bumped-
-# version` that those commits don't contribute to the bump decision either.
+# Map commit types to changelog groups. Mirrors the section structure from
+# the old release-please-config.json (Keep-a-Changelog convention): feat →
+# Added, fix → Fixed, all "internal change" types → Changed, security →
+# Security. This is the rendering used if we ever generate release notes from
+# cliff directly; today goreleaser renders them and uses an equivalent mapping
+# in .goreleaser.yaml — both must agree.
+#
+# `style` is the only type marked skip — release-please-config.json didn't
+# include it anywhere either. Bump decision is unaffected by these group
+# names: git-cliff only bumps on feat / fix / breaking regardless.
 commit_parsers = [
-  { message = "^feat",     group = "Features" },
-  { message = "^fix",      group = "Bug Fixes" },
-  { message = "^perf",     group = "Performance" },
-  { message = "^refactor", group = "Refactor" },
-  { message = "^docs",     skip = true },
+  { message = "^feat",     group = "Added" },
+  { message = "^fix",      group = "Fixed" },
+  { message = "^refactor", group = "Changed" },
+  { message = "^perf",     group = "Changed" },
+  { message = "^docs",     group = "Changed" },
+  { message = "^chore",    group = "Changed" },
+  { message = "^test",     group = "Changed" },
+  { message = "^build",    group = "Changed" },
+  { message = "^ci",       group = "Changed" },
+  { message = "^security", group = "Security" },
   { message = "^style",    skip = true },
-  { message = "^test",     skip = true },
-  { message = "^chore",    skip = true },
-  { message = "^ci",       skip = true },
-  { message = "^build",    skip = true },
 ]
