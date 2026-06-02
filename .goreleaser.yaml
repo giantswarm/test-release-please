@@ -1,0 +1,68 @@
+# goreleaser config for the push-based PoC.
+# Spec: https://goreleaser.com/customization/
+version: 2
+
+project_name: test-release-please
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: cli
+    main: ./
+    binary: test-release-please
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    # `-X main.version=...` injects the tag into the `version` var in main.go
+    # so the binary can report its own version. -s -w strips debug info to
+    # shrink the binary.
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+
+checksums:
+  name_template: "checksums.txt"
+
+# Release notes shown on the GitHub Release page. Generated from git log
+# between the previous tag and the new one, grouped by conventional-commit
+# type. Same shape as what release-please used to write into CHANGELOG.md
+# — just rendered at release time onto the GitHub Releases page instead of
+# committed back into the repo.
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*feat(\(.+\))?!?:'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*fix(\(.+\))?!?:'
+      order: 1
+    - title: Performance
+      regexp: '^.*perf(\(.+\))?!?:'
+      order: 2
+    - title: Other
+      order: 999
+  filters:
+    exclude:
+      - '^docs:'
+      - '^chore:'
+      - '^ci:'
+      - '^test:'
+      - '^style:'
+      - '^build:'
+
+release:
+  draft: false
+  prerelease: auto   # automatically marks vX.Y.Z-rc.N etc. as pre-releases

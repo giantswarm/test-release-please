@@ -1,0 +1,69 @@
+# Push-based release tagger.
+#
+# On every push to main, inspects conventional commits since the last v*.*.* tag
+# via git-cliff and creates a new tag if a bump is warranted. The tag push then
+# triggers the publishers (see release.yaml for the goreleaser side; for chart
+# and service repos, CircleCI's architect orbs fire on the same tag pattern).
+#
+# No release PR. No human approval step. The mechanism that protects against
+# bad releases is the pre-merge CI on the feature PRs that landed these
+# commits — once they're on main, they ship.
+name: Auto-tag
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write   # needed to push tags
+
+# Avoid two tagger runs racing on rapid back-to-back merges. A second push
+# while a tag is being computed waits for the first to finish.
+concurrency:
+  group: auto-tag
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # full history so git-cliff sees every commit
+          fetch-tags: true      # ensure tags are present in shallow runners
+
+      - name: Compute next version
+        id: cliff
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --bumped-version
+
+      - name: Decide whether to tag
+        id: decide
+        env:
+          NEXT: ${{ steps.cliff.outputs.version }}
+        run: |
+          set -euo pipefail
+          last=$(git tag --list 'v*.*.*' --sort=-v:refname | head -1)
+          echo "last tag: ${last:-<none>}"
+          echo "next computed: ${NEXT:-<empty>}"
+          if [ -z "${NEXT}" ] || [ "${NEXT}" = "${last}" ]; then
+            echo "No releasable commits since ${last:-inception}; skipping tag."
+            echo "tag=" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${NEXT}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push tag
+        if: steps.decide.outputs.tag != ''
+        env:
+          TAG: ${{ steps.decide.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # Use the github-actions[bot] identity so the tag's tagger is clearly
+          # attributable to CI rather than a real person.
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"

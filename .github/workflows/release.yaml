@@ -1,0 +1,30 @@
+# Publish a GitHub Release with built binaries when a v*.*.* tag is pushed.
+# For a chart or service repo this would be the CircleCI architect pipeline
+# instead — same trigger (tag push), different publisher.
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write   # goreleaser needs to create the GitHub Release
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # goreleaser reads tags + commit history for the changelog
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

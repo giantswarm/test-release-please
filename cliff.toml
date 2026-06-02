@@ -1,0 +1,40 @@
+# git-cliff config for the push-based PoC.
+#
+# Two jobs:
+#   1. Decide the next semver from conventional commits (`--bumped-version`).
+#   2. Render the release notes shown on the GitHub Release (`goreleaser`
+#      currently does this itself; cliff stays available if we later want a
+#      richer format or a CHANGELOG.md file in the repo).
+
+[bump]
+# `feat:` always bumps minor (not patch). Matches conventional-commits spec.
+features_always_bump_minor = true
+# `feat!:`/`BREAKING CHANGE` always bumps major.
+breaking_always_bump_major = true
+
+[git]
+conventional_commits = true
+# Drop non-conventional commits silently rather than counting them as
+# unclassified work — the bump-decider should only act on intent-bearing
+# commits.
+filter_unconventional = true
+# Highest-version tag (not creation date) is the baseline when computing what
+# changed since last release.
+topo_order = false
+sort_commits = "oldest"
+
+# Map commit types to changelog groups (used if we ever render notes from cliff
+# instead of letting goreleaser do it). The `skip = true` rows tell `--bumped-
+# version` that those commits don't contribute to the bump decision either.
+commit_parsers = [
+  { message = "^feat",     group = "Features" },
+  { message = "^fix",      group = "Bug Fixes" },
+  { message = "^perf",     group = "Performance" },
+  { message = "^refactor", group = "Refactor" },
+  { message = "^docs",     skip = true },
+  { message = "^style",    skip = true },
+  { message = "^test",     skip = true },
+  { message = "^chore",    skip = true },
+  { message = "^ci",       skip = true },
+  { message = "^build",    skip = true },
+]
