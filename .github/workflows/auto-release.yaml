@@ -70,8 +70,12 @@ jobs:
         run: |
           set -euo pipefail
           # Single expensive call: walks commits, queries the GitHub API for
-          # per-commit PR lookups, emits the full JSON context.
-          git-cliff --bump --context > cliff-context.json
+          # per-commit PR lookups, emits the JSON context for ONLY the bumped
+          # release (--latest filters to the most recent / about-to-be-cut
+          # version). Without --latest the context contains every release
+          # since repo inception and the render below would concatenate the
+          # whole history into each release's notes body.
+          git-cliff --bump --latest --context > cliff-context.json
           NEXT=$(jq -r '.[0].version' cliff-context.json)
           echo "next computed: ${NEXT:-<empty>}"
           echo "version=${NEXT}" >> "$GITHUB_OUTPUT"
