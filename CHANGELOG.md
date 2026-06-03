@@ -1,20 +1,15 @@
 # Changelog
 
-> **As of v1.0.0, this CHANGELOG is frozen.**
->
-> Release notes for v1.0.1 and later are published only on
-> [GitHub Releases](https://github.com/giantswarm/test-release-please/releases).
-> The push-based release flow (`auto-release.yaml`) generates them from
-> conventional commits at release time; nothing is committed back into this
-> file.
->
-> The pre-v1.0.0 entries below are preserved verbatim as they were written by
-> the previous release-please flow.
-
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+Sections from v1.0.1 onwards are written by the push-based release flow
+(`.github/workflows/auto-release.yaml`) at release time. The marker
+comment below pins the insertion point; do not remove it.
+
+<!-- auto-release: insert below -->
 
 ## 1.0.0 (2026-06-01)
 
