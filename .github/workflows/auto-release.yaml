@@ -102,23 +102,19 @@ jobs:
             echo "tag=${NEXT}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Push tag
-        if: steps.decide.outputs.tag != ''
-        env:
-          TAG: ${{ steps.decide.outputs.tag }}
-          # Attribute the tag to the person whose push triggered the workflow.
-          # For PR-merge pushes this is the merger; for direct pushes it's the
-          # pusher. Either way, "the person responsible for this push" — works
-          # for both main releases and release-branch backports.
-          GIT_ACTOR: ${{ github.actor }}
-        run: |
-          set -euo pipefail
-          git config user.name  "$GIT_ACTOR"
-          git config user.email "${GIT_ACTOR}@users.noreply.github.com"
-          git tag -a "$TAG" -m "Release $TAG"
-          git push origin "$TAG"
-
-      - name: Create GitHub Release
+      # Create the tag AND the GitHub Release in one atomic API call. GitHub's
+      # release-create endpoint accepts a tag_name + target_commitish and, if
+      # the tag doesn't already exist, creates it pointing at that commitish
+      # as part of the same operation. Either both exist or neither does —
+      # no risk of a tag-without-release "stuck" state, no race window with
+      # CircleCI's `upload-release-assets` job that starts polling the
+      # release the instant it sees the tag.
+      #
+      # Trade-off: the tag created this way is **lightweight** (just a ref),
+      # not annotated. For our use — git describe, architect's tag filter,
+      # gitsemver, gh release view — both behave identically. Nothing in the
+      # giantswarm stack distinguishes them.
+      - name: Create release (and the tag, atomically)
         if: steps.decide.outputs.tag != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -126,14 +122,7 @@ jobs:
           TAG: ${{ steps.decide.outputs.tag }}
         run: |
           set -euo pipefail
-          # --target pins the release to the current branch/ref so backport
-          # releases created from release-* end up associated with that branch
-          # rather than main.
-          # --verify-tag refuses to create a release for a tag that doesn't
-          # exist on the remote — defensive against the unlikely case where
-          # the tag push above silently failed.
           gh release create "$TAG" \
             --title "$TAG" \
             --notes-file release-notes.md \
-            --target "$GITHUB_SHA" \
-            --verify-tag
+            --target "$GITHUB_SHA"
