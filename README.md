@@ -2,7 +2,7 @@
 
 Throwaway repo for testing CI tooling. Currently configured as a PoC of the
 **push-based release flow** (no Release PR; conventional commits on `main`
-auto-tag, the tag triggers publishing).
+auto-tag, the tag triggers any downstream publishing — architect, etc.).
 
 ## How it works
 
@@ -10,26 +10,30 @@ auto-tag, the tag triggers publishing).
 push to main
    │
    ▼
-.github/workflows/auto-tag.yaml  ── git-cliff inspects commits since last tag
-                                  ── creates and pushes vX.Y.Z if bump warranted
+.github/workflows/auto-tag.yaml
+   ├─ git-cliff inspects commits since last tag
+   ├─ pushes vX.Y.Z tag if a bump is warranted
+   └─ creates the GitHub Release with cliff-generated notes
    │
-   ▼ (tag push)
-.github/workflows/goreleaser.yaml ── goreleaser builds binaries, opens GH Release
+   ▼ (tag push triggers existing CircleCI architect pipeline, in real repos)
+   ├─ architect/push-to-app-catalog          (chart repos)
+   ├─ architect/push-to-registries           (image-shipping repos)
+   └─ architect/upload-release-assets        (Go CLIs — appends binaries
+                                              to the release we just made)
 ```
 
-For chart/service repos the `goreleaser.yaml` would be replaced by the existing
-CircleCI architect pipeline (same tag trigger, different publisher).
+This test repo is a minimal one — it has no `.circleci/config.yml`, so the
+"downstream publishing" part doesn't fire here. Real chart/service/CLI repos
+already have architect wired in via CircleCI and reuse it unchanged. The
+auto-tag.yaml workflow is the only new piece they need.
 
 ## Files
 
 | Path | Purpose |
 |---|---|
-| `.github/workflows/auto-tag.yaml` | Tagger — runs on push to `main` or any `release-*` branch |
-| `.github/workflows/goreleaser.yaml` | Publisher — runs on tag push, invokes goreleaser |
-| `cliff.toml`                      | git-cliff config: bump rules + (unused here) changelog template |
-| `.goreleaser.yaml`                | goreleaser config: builds, archives, release notes |
-| `main.go` / `go.mod`              | Minimal Go CLI so goreleaser has something to build |
-| `CHANGELOG.md`                    | **Frozen** at v1.0.0 (the last release-please-produced version). New releases publish notes only to GitHub Releases. |
+| `.github/workflows/auto-tag.yaml` | Tagger + release-page publisher — runs on push to `main` or any `release-*` branch |
+| `cliff.toml` | git-cliff config: bump rules + release-notes template |
+| `CHANGELOG.md` | **Frozen** at v1.0.0 (the last release-please-produced version). New releases publish notes only to GitHub Releases. |
 
 ## How to test
 
@@ -40,10 +44,14 @@ Land any conventional commit on `main`:
 | `fix: something` | Patch bump (e.g. v1.0.0 → v1.0.1) |
 | `feat: something` | Minor bump (e.g. v1.0.0 → v1.1.0) |
 | `feat!: something` or `BREAKING CHANGE:` in body | Major bump (e.g. v1.0.0 → v2.0.0) |
-| `chore:` / `docs:` / `ci:` / `test:` / `build:` / `style:` | No release |
+| `chore:` / `docs:` / `ci:` / `test:` / `build:` | Counted in release notes (under "Changed") but does not by itself trigger a release |
+| `style:` | Filtered out entirely |
 
-After the tag is pushed, watch the **GoReleaser** workflow run; it'll produce
-a GitHub Release with binaries under "Assets".
+After the tag is pushed, you'll see a new entry on the
+[Releases page](https://github.com/giantswarm/test-release-please/releases)
+with notes grouped into **Added** / **Fixed** / **Changed** / **Security**
+sections (Keep-a-Changelog convention, matching the section structure
+release-please used to write into CHANGELOG.md).
 
 ## Backports
 
@@ -61,8 +69,7 @@ git push -u origin release-2.x
 # 3. Merge the PR.
 #    Auto-tag fires on release-2.x → git-cliff sees commits since v2.3.5,
 #    not v3.0.0, because v3.0.0 isn't reachable from release-2.x's history.
-#    Tags v2.3.6 and pushes.
-#    GoReleaser fires on the v2.3.6 tag → publishes binaries.
+#    Tags v2.3.6, creates the v2.3.6 GitHub Release with notes.
 ```
 
 Two gotchas to keep in mind:
@@ -96,3 +103,6 @@ manual-Release-PR flow (or release-please):
   is switched to the push-based mode.
 - **`release-please-config.json` / `.release-please-manifest.json`** (if
   migrating from release-please): remove. devctl handles this too.
+- **`.circleci/config.yml` + `Makefile.gen.go.mk`** (architect/gitsemver):
+  keep, unchanged. The new flow tags on push, then architect's existing tag
+  filter (`tags: only: /^v.*/`) takes over for the publishing side.

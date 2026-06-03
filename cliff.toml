@@ -1,10 +1,10 @@
 # git-cliff config for the push-based PoC.
 #
 # Two jobs:
-#   1. Decide the next semver from conventional commits (`--bumped-version`).
-#   2. Render the release notes shown on the GitHub Release (`goreleaser`
-#      currently does this itself; cliff stays available if we later want a
-#      richer format or a CHANGELOG.md file in the repo).
+#   1. Decide the next semver from conventional commits (`--bumped-version`,
+#      used by .github/workflows/auto-tag.yaml).
+#   2. Render the release notes posted on the GitHub Release (`--latest`,
+#      also used by auto-tag.yaml after the tag is pushed).
 
 [bump]
 # `feat:` always bumps minor (not patch). Matches conventional-commits spec.
@@ -26,9 +26,7 @@ sort_commits = "oldest"
 # Map commit types to changelog groups. Mirrors the section structure from
 # the old release-please-config.json (Keep-a-Changelog convention): feat →
 # Added, fix → Fixed, all "internal change" types → Changed, security →
-# Security. This is the rendering used if we ever generate release notes from
-# cliff directly; today goreleaser renders them and uses an equivalent mapping
-# in .goreleaser.yaml — both must agree.
+# Security.
 #
 # `style` is the only type marked skip — release-please-config.json didn't
 # include it anywhere either. Bump decision is unaffected by these group
@@ -46,3 +44,21 @@ commit_parsers = [
   { message = "^security", group = "Security" },
   { message = "^style",    skip = true },
 ]
+
+# Template for the rendered release notes. Body is what gets posted to the
+# GitHub Release; header and footer are empty so the release page shows only
+# the section list. Squash-merge PR refs like "(#42)" in commit messages
+# auto-link on the GitHub Release page without us needing to template them.
+[changelog]
+header = ""
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group }}
+
+{% for commit in commits %}
+- {{ commit.message | split(pat="\n") | first | upper_first }}
+{% endfor %}
+{% endfor %}
+"""
+trim = true
+footer = ""
