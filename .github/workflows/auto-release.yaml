@@ -44,9 +44,33 @@ jobs:
     name: Tag
     runs-on: ubuntu-24.04
     steps:
+      # PoC scaffolding: mint a short-lived installation token from the
+      # `release-please-workflow` GitHub App so the commit-back step can
+      # bypass main-branch protection. That App is already in this repo's
+      # branch-protection bypass list (with `contents: write`) from the
+      # previous release-please setup. The default GITHUB_TOKEN is rejected
+      # because `github-actions[bot]` cannot be bypass-listed in classic
+      # branch protection — only Repository Rulesets expose that. Reusing
+      # the release-please App here is the cheapest way to validate the
+      # commit-back end-to-end without a rulesets migration; longer-term
+      # this repo (and the migration targets) should move to a Ruleset
+      # that bypasses GitHub Actions directly and this step goes away.
+      - name: Mint App token for commit-back
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
+        with:
+          app-id: ${{ secrets.RELEASE_PLEASE_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_PRIVATE_KEY }}
+
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
+          # Use the App token instead of the default GITHUB_TOKEN so that
+          # `git push` in the commit-back step inherits the bypass-listed
+          # identity. Without this, the push step hits GH006 protected-
+          # branch rejection (validated empirically on the v1.5.0 release —
+          # release itself succeeded, CHANGELOG.md commit-back failed).
+          token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0        # full history so git-cliff sees every commit
           fetch-tags: true      # ensure tags are present (shallow runners drop them by default)
 
