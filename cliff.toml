@@ -23,6 +23,20 @@ filter_unconventional = true
 topo_order = false
 sort_commits = "oldest"
 
+# Strip the trailing " (#N)" that GitHub appends to squash-merge commit
+# messages. Our template renders the PR link explicitly via cliff's GitHub
+# integration (commit.remote.pr_number — see [changelog].body), so the
+# auto-appended reference would duplicate it.
+#
+# `(?m)` enables multi-line mode so `$` matches end-of-line (the squash
+# `(#N)` lives at the end of the subject line, not the end of the full
+# commit text — git-cliff's default regex mode is single-line). This
+# anchoring keeps `(#N)` references that appear inside commit bodies
+# untouched.
+commit_preprocessors = [
+  { pattern = '(?m) \(#\d+\)$', replace = "" },
+]
+
 # Map commit types to changelog groups. Mirrors the section structure from
 # the old release-please-config.json (Keep-a-Changelog convention): feat →
 # Added, fix → Fixed, all "internal change" types → Changed, security →
