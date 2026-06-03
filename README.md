@@ -29,6 +29,7 @@ CircleCI architect pipeline (same tag trigger, different publisher).
 | `cliff.toml`                      | git-cliff config: bump rules + (unused here) changelog template |
 | `.goreleaser.yaml`                | goreleaser config: builds, archives, release notes |
 | `main.go` / `go.mod`              | Minimal Go CLI so goreleaser has something to build |
+| `CHANGELOG.md`                    | **Frozen** at v1.0.0 (the last release-please-produced version). New releases publish notes only to GitHub Releases. |
 
 ## How to test
 
@@ -76,3 +77,22 @@ Two gotchas to keep in mind:
    release branches `fix:`-only; nothing in the tooling enforces this.
    Reviewer discipline (or a tighter `cliff.toml` on release branches if
    you want to be strict).
+
+## Migrating an existing repo to this flow
+
+What's safe to remove and what's not, for a repo currently on the legacy
+manual-Release-PR flow (or release-please):
+
+- **Git tags and GitHub Releases:** keep. They're not tied to which workflow
+  created them. All historical release pages stay accessible at their URLs.
+- **`CHANGELOG.md`:** **do not delete.** Freeze it instead — add a header
+  noting the version at which the cutoff happened and pointing readers at
+  the GitHub Releases page going forward. See this repo's own
+  `CHANGELOG.md` as the example. New releases publish their notes to GitHub
+  Releases only; nothing writes back to this file.
+- **Legacy workflow files** (`zz_generated.create_release_pr.yaml`,
+  `zz_generated.create_release.yaml`, `zz_generated.validate_changelog.yaml`):
+  remove. devctl will handle this when the team's `releaseWorkflow` config
+  is switched to the push-based mode.
+- **`release-please-config.json` / `.release-please-manifest.json`** (if
+  migrating from release-please): remove. devctl handles this too.
