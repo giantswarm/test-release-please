@@ -71,11 +71,23 @@ jobs:
           set -euo pipefail
           # Single expensive call: walks commits, queries the GitHub API for
           # per-commit PR lookups, emits the JSON context for ONLY the bumped
-          # release (--latest filters to the most recent / about-to-be-cut
-          # version). Without --latest the context contains every release
-          # since repo inception and the render below would concatenate the
-          # whole history into each release's notes body.
-          git-cliff --bump --latest --context > cliff-context.json
+          # release.
+          #
+          # Flag choice matters here. Both `--latest` and `--unreleased`
+          # *look* like single-release filters, but only one composes with
+          # `--bump`:
+          #   --latest --bump : returns the latest EXISTING tag — drops the
+          #                     bump silently. We don't want this (it caused
+          #                     #15 to never produce a new tag).
+          #   --unreleased --bump : filters to commits that aren't in any tag
+          #                         yet, computes the bumped version from
+          #                         them, returns JSON for that bumped
+          #                         release only. This is what we want.
+          #
+          # Without either filter, --bump --context returns the full release
+          # history in JSON and the render below would concatenate every
+          # past release into each new release's notes (the #13 → #15 bug).
+          git-cliff --unreleased --bump --context > cliff-context.json
           NEXT=$(jq -r '.[0].version' cliff-context.json)
           echo "next computed: ${NEXT:-<empty>}"
           echo "version=${NEXT}" >> "$GITHUB_OUTPUT"
