@@ -1,11 +1,20 @@
 # Changelog
 
-## [1.1.0](https://github.com/giantswarm/test-release-please/compare/v1.0.0...v1.1.0) (2026-06-01)
+> **As of v1.0.0, this CHANGELOG is frozen.**
+>
+> Release notes for v1.0.1 and later are published only on
+> [GitHub Releases](https://github.com/giantswarm/test-release-please/releases).
+> The push-based release flow (`auto-release.yaml`) generates them from
+> conventional commits at release time; nothing is committed back into this
+> file.
+>
+> The pre-v1.0.0 entries below are preserved verbatim as they were written by
+> the previous release-please flow.
 
+All notable changes to this project will be documented in this file.
 
-### Added
-
-* improve changelog ([5ada690](https://github.com/giantswarm/test-release-please/commit/5ada6903e80cba67db10ac08eb6f60b9868b962a))
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 1.0.0 (2026-06-01)
 
@@ -30,10 +39,3 @@
 * pin release workflow to fix-first-release-auto-merge-detection ([a32b787](https://github.com/giantswarm/test-release-please/commit/a32b787341667e1b9fd0fc991c547e50b4687e65))
 * wire release-please-approver App into release workflow ([d6f51af](https://github.com/giantswarm/test-release-please/commit/d6f51aff27bf2394a4df4b2b9941eaae33b1f46d))
 * wire release-please-approver App into release workflow ([9a078b0](https://github.com/giantswarm/test-release-please/commit/9a078b008644feaad9c187eb707f75ec4d4c566f))
-
-## Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
