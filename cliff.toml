@@ -1,10 +1,11 @@
-# git-cliff config for the push-based PoC.
+# git-cliff config for the push-based auto-release flow.
 #
-# Two jobs:
-#   1. Decide the next semver from conventional commits (`--bumped-version`,
-#      used by .github/workflows/auto-tag.yaml).
-#   2. Render the release notes posted on the GitHub Release (`--latest`,
-#      also used by auto-tag.yaml after the tag is pushed).
+# A single git-cliff invocation in .github/workflows/auto-release.yaml
+# runs `--unreleased --bump --context` to compute the next semver from
+# conventional commits AND emit the JSON context that the same workflow
+# then re-renders with `--from-context --strip all` for the release-notes
+# body posted on the GitHub Release. One commit walk, one set of GitHub
+# API PR lookups, two cheap outputs.
 
 [bump]
 # `feat:` always bumps minor (not patch). Matches conventional-commits spec.
