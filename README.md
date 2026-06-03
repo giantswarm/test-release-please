@@ -2,7 +2,8 @@
 
 Throwaway repo for testing CI tooling. Currently configured as a PoC of the
 **push-based release flow** (no Release PR; conventional commits on `main`
-auto-tag, the tag triggers any downstream publishing — architect, etc.).
+auto-tag and create the GitHub Release; the tag triggers any downstream
+publishing — architect, etc.).
 
 ## How it works
 
@@ -10,7 +11,7 @@ auto-tag, the tag triggers any downstream publishing — architect, etc.).
 push to main
    │
    ▼
-.github/workflows/auto-tag.yaml
+.github/workflows/auto-release.yaml
    ├─ git-cliff inspects commits since last tag
    ├─ pushes vX.Y.Z tag if a bump is warranted
    └─ creates the GitHub Release with cliff-generated notes
@@ -25,13 +26,13 @@ push to main
 This test repo is a minimal one — it has no `.circleci/config.yml`, so the
 "downstream publishing" part doesn't fire here. Real chart/service/CLI repos
 already have architect wired in via CircleCI and reuse it unchanged. The
-auto-tag.yaml workflow is the only new piece they need.
+auto-release.yaml workflow is the only new piece they need.
 
 ## Files
 
 | Path | Purpose |
 |---|---|
-| `.github/workflows/auto-tag.yaml` | Tagger + release-page publisher — runs on push to `main` or any `release-*` branch |
+| `.github/workflows/auto-release.yaml` | Tagger + release-page publisher — runs on push to `main` or any `release-*` branch |
 | `cliff.toml` | git-cliff config: bump rules + release-notes template |
 | `CHANGELOG.md` | **Frozen** at v1.0.0 (the last release-please-produced version). New releases publish notes only to GitHub Releases. |
 
@@ -67,7 +68,7 @@ git push -u origin release-2.x
 #    PR title follows conventional commits as usual: "fix: backport thing".
 
 # 3. Merge the PR.
-#    Auto-tag fires on release-2.x → git-cliff sees commits since v2.3.5,
+#    Auto-release fires on release-2.x → git-cliff sees commits since v2.3.5,
 #    not v3.0.0, because v3.0.0 isn't reachable from release-2.x's history.
 #    Tags v2.3.6, creates the v2.3.6 GitHub Release with notes.
 ```

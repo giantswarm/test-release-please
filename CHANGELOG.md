@@ -4,9 +4,9 @@
 >
 > Release notes for v1.0.1 and later are published only on
 > [GitHub Releases](https://github.com/giantswarm/test-release-please/releases).
-> The push-based release flow (`auto-tag.yaml` + `goreleaser.yaml`) generates
-> them from conventional commits at release time; nothing is committed back
-> into this file.
+> The push-based release flow (`auto-release.yaml`) generates them from
+> conventional commits at release time; nothing is committed back into this
+> file.
 >
 > The pre-v1.0.0 entries below are preserved verbatim as they were written by
 > the previous release-please flow.
