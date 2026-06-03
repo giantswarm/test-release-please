@@ -69,18 +69,22 @@ repo = "test-release-please"
 # line in the rendered Markdown.
 [changelog]
 header = ""
+# `{%-` / `-%}` strip the surrounding newline so the rendered Markdown is
+# tight: one blank line before each "### " header, no leading blank, no
+# double-blank between header and bullets. Without the whitespace control
+# the output picks up two extra blank lines per loop iteration.
 body = """
-{% for group, commits in commits | group_by(attribute="group") %}
+{% for group, commits in commits | group_by(attribute="group") -%}
 ### {{ group }}
 
-{% for commit in commits %}
+{% for commit in commits -%}
 - {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
 {% if commit.breaking %}[**breaking**] {% endif %}\
 {{ commit.message | split(pat="\n") | first | upper_first }}\
 {% if commit.remote.pr_number %} in [#{{ commit.remote.pr_number }}](https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}/pull/{{ commit.remote.pr_number }}){% endif %}\
 {% if commit.remote.username %} by [@{{ commit.remote.username }}](https://github.com/{{ commit.remote.username }}){% endif %}
 {% endfor %}
-{% endfor %}
+{% endfor -%}
 """
 trim = true
 footer = ""
