@@ -1,0 +1,3 @@
+# Per-arch binaries written into the worktree by the multi-arch build loop.
+# Ignored so an already-built sibling binary doesn't mark the next arch +dirty.
+/app-*

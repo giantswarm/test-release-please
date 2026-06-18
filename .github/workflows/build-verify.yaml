@@ -1,0 +1,89 @@
+# Proves the runtime/debug version approach in CI. Triggered on a v* tag, it
+# reproduces architect's go-build closely enough to validate the only thing a
+# laptop can't: that a CI checkout of a real tag (detached HEAD, shallow) lets
+# the Go toolchain embed a CLEAN tag version into the binary.
+#
+# Faithful to architect's go-build where it matters:
+#   - shallow checkout of the tag (fetch-depth: 1, like CircleCI's default)
+#   - .ldflags carrying ONLY gitSHA + buildTimestamp, NOT version
+#   - all six arches built into the worktree in one loop (exercises +dirty)
+#   - version read back from the binary via `go version -m`
+#
+# It does NOT run in the architect Docker image / CircleCI executor, so the
+# architect-image-specific git-trust (safe.directory) question is only a proxy
+# here; the Go + git mechanics are the same.
+name: build-verify
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout tag (shallow, detached — mimics CircleCI checkout)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Show git state
+        run: |
+          echo "is shallow: $(git rev-parse --is-shallow-repository)"
+          echo "describe:   $(git describe --tags --always)"
+          echo "tag ref:    ${GITHUB_REF_NAME}"
+          echo "porcelain (should be empty):"
+          git status --porcelain
+
+      - name: Build all six arches like architect go-build (ldflags WITHOUT version)
+        run: |
+          set -euo pipefail
+          MOD=github.com/giantswarm/test-release-please/pkg/project
+          # Reproduce the orb's .ldflags: only gitSHA + buildTimestamp.
+          printf -- "-s -w" > .ldflags
+          printf -- " -X '%s.buildTimestamp=%s'" "$MOD" "$(date --utc '+%FT%TZ')" >> .ldflags
+          printf -- " -X '%s.gitSHA=%s'" "$MOD" "${GITHUB_SHA}" >> .ldflags
+          LD="$(cat .ldflags)"
+          echo "ldflags: $LD"
+          for arch in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+            goos="${arch%%/*}"; goarch="${arch##*/}"
+            out="app-${goos}-${goarch}"; [ "$goos" = "windows" ] && out="${out}.exe"
+            echo "building $out"
+            CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -trimpath -ldflags "$LD" -o "$out" .
+          done
+          echo "--- git status after multi-arch build (empty == gitignore works) ---"
+          git status --porcelain
+
+      - name: Inspect embedded build info for every binary
+        run: |
+          set -euo pipefail
+          for f in app-*; do
+            echo "===== $f ====="
+            go version -m "$f" | grep -E '	mod	|vcs\.(revision|modified)' || true
+          done
+
+      - name: Assert clean tag version on the release binary
+        run: |
+          set -euo pipefail
+          info="$(go version -m app-linux-amd64)"
+          ver="$(printf '%s\n' "$info" | awk -F'\t' '$2=="mod"{print $4; exit}')"
+          dirty="$(printf '%s\n' "$info" | awk -F'=' '/vcs.modified/{print $2}')"
+          echo "embedded version: '$ver'"
+          echo "vcs.modified:     '$dirty'"
+          fail=0
+          if [ "$ver" != "${GITHUB_REF_NAME}" ]; then
+            echo "FAIL: embedded version '$ver' != tag '${GITHUB_REF_NAME}'"; fail=1
+          fi
+          if [ "$dirty" = "true" ]; then
+            echo "FAIL: build marked +dirty"; fail=1
+          fi
+          if [ "$fail" -ne 0 ]; then exit 1; fi
+          echo "PASS: binary embeds clean tag version ${GITHUB_REF_NAME}"
+
+      - name: Run the binary's version command for good measure
+        run: ./app-linux-amd64 version
