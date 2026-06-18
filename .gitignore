@@ -1,3 +1,7 @@
 # Per-arch binaries written into the worktree by the multi-arch build loop.
 # Ignored so an already-built sibling binary doesn't mark the next arch +dirty.
 /app-*
+# Scratch files architect's go-build/go-test write into the worktree. Ignored
+# so they don't mark the build +dirty in the version embedded via build info.
+.ldflags
+.platforms

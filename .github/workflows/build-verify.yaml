@@ -50,11 +50,14 @@ jobs:
           printf -- " -X '%s.gitSHA=%s'" "$MOD" "${GITHUB_SHA}" >> .ldflags
           LD="$(cat .ldflags)"
           echo "ldflags: $LD"
+          # Mirror the orb's .platforms scratch file too (created empty, appended per arch).
+          : > .platforms
           for arch in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
             goos="${arch%%/*}"; goarch="${arch##*/}"
             out="app-${goos}-${goarch}"; [ "$goos" = "windows" ] && out="${out}.exe"
             echo "building $out"
             CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -trimpath -ldflags "$LD" -o "$out" .
+            echo "$arch" >> .platforms
           done
           echo "--- git status after multi-arch build (empty == gitignore works) ---"
           git status --porcelain
